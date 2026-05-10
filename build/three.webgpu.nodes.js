@@ -18210,23 +18210,17 @@ class BatchNode extends Node {
 
 		const matricesTexture = this.batchMesh._matricesTexture;
 
-		let batchingMatrix = mat4();
+		const size = int( textureSize( textureLoad( matricesTexture ), 0 ).x ).toConst();
+		const j = float( indirectId ).mul( 4 ).toInt().toConst();
 
-		if ( matricesTexture !== null ) {
-
-			const size = int( textureSize( textureLoad( matricesTexture ), 0 ).x ).toConst();
-			const j = float( indirectId ).mul( 4 ).toInt().toConst();
-
-			const x = j.mod( size ).toConst();
-			const y = j.div( size ).toConst();
-			const batchingMatrix = mat4(
-				textureLoad( matricesTexture, ivec2( x, y ) ),
-				textureLoad( matricesTexture, ivec2( x.add( 1 ), y ) ),
-				textureLoad( matricesTexture, ivec2( x.add( 2 ), y ) ),
-				textureLoad( matricesTexture, ivec2( x.add( 3 ), y ) )
-			);
-
-		}
+		const x = j.mod( size ).toConst();
+		const y = j.div( size ).toConst();
+		const batchingMatrix = mat4(
+			textureLoad( matricesTexture, ivec2( x, y ) ),
+			textureLoad( matricesTexture, ivec2( x.add( 1 ), y ) ),
+			textureLoad( matricesTexture, ivec2( x.add( 2 ), y ) ),
+			textureLoad( matricesTexture, ivec2( x.add( 3 ), y ) )
+		);
 
 
 		const colorsTexture = this.batchMesh._colorsTexture;
@@ -18255,23 +18249,19 @@ class BatchNode extends Node {
 
 		}
 
-		if ( colorsTexture !== null ) {
+		const bm = mat3( batchingMatrix );
 
-			const bm = mat3( batchingMatrix );
+		positionLocal.assign( batchingMatrix.mul( positionLocal ) );
 
-			positionLocal.assign( batchingMatrix.mul( positionLocal ) );
+		const transformedNormal = normalLocal.div( vec3( bm[ 0 ].dot( bm[ 0 ] ), bm[ 1 ].dot( bm[ 1 ] ), bm[ 2 ].dot( bm[ 2 ] ) ) );
 
-			const transformedNormal = normalLocal.div( vec3( bm[ 0 ].dot( bm[ 0 ] ), bm[ 1 ].dot( bm[ 1 ] ), bm[ 2 ].dot( bm[ 2 ] ) ) );
+		const batchingNormal = bm.mul( transformedNormal ).xyz;
 
-			const batchingNormal = bm.mul( transformedNormal ).xyz;
+		normalLocal.assign( batchingNormal );
 
-			normalLocal.assign( batchingNormal );
+		if ( builder.hasGeometryAttribute( 'tangent' ) ) {
 
-			if ( builder.hasGeometryAttribute( 'tangent' ) ) {
-
-				tangentLocal.mulAssign( bm );
-
-			}
+			tangentLocal.mulAssign( bm );
 
 		}
 
@@ -30178,7 +30168,11 @@ class RenderObject {
 
 		if ( object.isBatchedMesh ) {
 
-			cacheKey += object._matricesTexture.uuid + ',';
+			if ( object._matricesTexture !== null ) {
+
+				cacheKey += object._matricesTexture.uuid + ',';
+				
+			}
 
 			if ( object._colorsTexture !== null ) {
 
