@@ -18210,17 +18210,23 @@ class BatchNode extends Node {
 
 		const matricesTexture = this.batchMesh._matricesTexture;
 
-		const size = int( textureSize( textureLoad( matricesTexture ), 0 ).x ).toConst();
-		const j = float( indirectId ).mul( 4 ).toInt().toConst();
+		let batchingMatrix = mat4();
 
-		const x = j.mod( size ).toConst();
-		const y = j.div( size ).toConst();
-		const batchingMatrix = mat4(
-			textureLoad( matricesTexture, ivec2( x, y ) ),
-			textureLoad( matricesTexture, ivec2( x.add( 1 ), y ) ),
-			textureLoad( matricesTexture, ivec2( x.add( 2 ), y ) ),
-			textureLoad( matricesTexture, ivec2( x.add( 3 ), y ) )
-		);
+		if ( matricesTexture !== null ) {
+
+			const size = int( textureSize( textureLoad( matricesTexture ), 0 ).x ).toConst();
+			const j = float( indirectId ).mul( 4 ).toInt().toConst();
+
+			const x = j.mod( size ).toConst();
+			const y = j.div( size ).toConst();
+			const batchingMatrix = mat4(
+				textureLoad( matricesTexture, ivec2( x, y ) ),
+				textureLoad( matricesTexture, ivec2( x.add( 1 ), y ) ),
+				textureLoad( matricesTexture, ivec2( x.add( 2 ), y ) ),
+				textureLoad( matricesTexture, ivec2( x.add( 3 ), y ) )
+			);
+
+		}
 
 
 		const colorsTexture = this.batchMesh._colorsTexture;
@@ -18249,19 +18255,23 @@ class BatchNode extends Node {
 
 		}
 
-		const bm = mat3( batchingMatrix );
+		if ( colorsTexture !== null ) {
 
-		positionLocal.assign( batchingMatrix.mul( positionLocal ) );
+			const bm = mat3( batchingMatrix );
 
-		const transformedNormal = normalLocal.div( vec3( bm[ 0 ].dot( bm[ 0 ] ), bm[ 1 ].dot( bm[ 1 ] ), bm[ 2 ].dot( bm[ 2 ] ) ) );
+			positionLocal.assign( batchingMatrix.mul( positionLocal ) );
 
-		const batchingNormal = bm.mul( transformedNormal ).xyz;
+			const transformedNormal = normalLocal.div( vec3( bm[ 0 ].dot( bm[ 0 ] ), bm[ 1 ].dot( bm[ 1 ] ), bm[ 2 ].dot( bm[ 2 ] ) ) );
 
-		normalLocal.assign( batchingNormal );
+			const batchingNormal = bm.mul( transformedNormal ).xyz;
 
-		if ( builder.hasGeometryAttribute( 'tangent' ) ) {
+			normalLocal.assign( batchingNormal );
 
-			tangentLocal.mulAssign( bm );
+			if ( builder.hasGeometryAttribute( 'tangent' ) ) {
+
+				tangentLocal.mulAssign( bm );
+
+			}
 
 		}
 
